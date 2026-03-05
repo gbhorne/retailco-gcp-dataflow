@@ -87,12 +87,20 @@ retailco-gcp-dataflow/
 │   ├── reconciliation.sql            Streaming vs batch reconciliation join
 │   └── three_way_join.sql            Three-table join across all three builds
 ├── screenshots/
-│   ├── build2/                       Batch pipeline console screenshots
-│   └── build3/                       Custom Beam pipeline console screenshots
+│   ├── build2_batch_dag_running.png
+│   ├── build2_batch_dag_completed.png
+│   ├── build2_fee_analysis_by_card_type.png
+│   ├── build2_merchant_net_revenue.png
+│   ├── build2_reconciliation_query.png
+│   ├── build2_cloud_scheduler.png
+│   ├── build3_beam_dag_top.png
+│   ├── build3_beam_dag_bottom.png
+│   ├── build3_write_to_bigquery_stage.png
+│   ├── build3_three_way_join_results.png
+│   └── build3_three_way_join_full_row.png
 └── docs/
     ├── RetailCo_Architecture.svg     Full architecture diagram
-    ├── RetailCo_QA_Explanation.docx  Technical Q&A and design decisions
-    └── RetailCo_Medium_Article.md    Medium article writeup
+    └── RetailCo_QA_Explanation.docx  Technical Q&A and design decisions
 ```
 
 ---
@@ -103,7 +111,6 @@ retailco-gcp-dataflow/
 |---|---|
 | [Architecture Diagram](docs/RetailCo_Architecture.svg) | Three-build pipeline architecture with component details |
 | [Q&A and Technical Explanation](docs/RetailCo_QA_Explanation.docx) | 16 interview-ready Q&A covering design decisions, debugging, and production considerations |
-| [Medium Article](docs/RetailCo_Medium_Article.md) | First-person writeup covering what was built and what was learned |
 
 ---
 
