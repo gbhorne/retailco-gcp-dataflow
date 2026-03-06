@@ -1,168 +1,189 @@
-# ADK Anomaly Detection Agent
+# RetailCo GCP Dataflow Platform
 
-A retail anomaly detection system built with [Google ADK](https://github.com/google/adk-python) (Agent Development Kit), BigQuery ML ARIMA_PLUS forecasting, and Z-score statistical analysis. The agent monitors 5 years of daily sales data, detects revenue anomalies and stockout spikes, explains findings in natural language, and forecasts future trends with 95% confidence intervals.
+![Google Cloud](https://img.shields.io/badge/Google_Cloud-Dataflow-4285F4?style=flat&logo=google-cloud&logoColor=white)
+![Apache Beam](https://img.shields.io/badge/Apache_Beam-Python_3.12-E25A1C?style=flat&logo=apache&logoColor=white)
+![BigQuery](https://img.shields.io/badge/BigQuery-Analytics-669DF6?style=flat&logo=google-cloud&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=flat&logo=python&logoColor=white)
+![Status](https://img.shields.io/badge/Verification-18%2F18_Passed-2EA44F?style=flat)
 
-**Repository**: [github.com/gbhorne/adk-anomaly-detection](https://github.com/gbhorne/adk-anomaly-detection)
+A three-build financial data platform on Google Cloud Platform demonstrating real-time streaming ingestion, scheduled batch loading, and custom windowed fraud detection using Apache Beam.
 
-![Architecture Diagram](docs/architecture_diagram.svg)
+> **Synthetic Data Disclaimer:** All data in this project is fully synthetic. Transactions, merchants, amounts, settlement records, and fraud flags were generated programmatically for demonstration purposes. All figures are non-production and do not represent real financial activity.
 
-## Screenshots
+---
 
-| Query | Tool Called | Result |
-|-------|-----------|--------|
-| "Show me recent revenue anomalies" | `get_recent_revenue_anomalies` | [View](docs/screenshots/02_recent_revenue_anomalies.png) |
-| "What happened on 2022-06-20?" | `get_anomaly_detail` | [View](docs/screenshots/03_anomaly_detail_2022_06_20.png) |
-| "Give me a 30-day revenue forecast" | `get_revenue_forecast` | [View](docs/screenshots/04_revenue_forecast_30day.png) |
-| "Summarize all anomalies across the dataset" | `get_anomaly_summary` | [View](docs/screenshots/05_anomaly_summary.png) |
-| "Are there any stockout spikes recently?" | `get_recent_stockout_anomalies` | [View](docs/screenshots/06_stockout_spikes.png) |
+## Architecture
 
-![Recent Revenue Anomalies](docs/screenshots/02_recent_revenue_anomalies.png)
-![Anomaly Detail Drill-Down](docs/screenshots/03_anomaly_detail_2022_06_20.png)
-![Revenue Forecast](docs/screenshots/04_revenue_forecast_30day.png)
+![RetailCo GCP Dataflow Architecture](docs/RetailCo_Architecture.svg)
 
-## Key Features
+Three pipelines feed a single BigQuery dataset and are joined in a final reconciliation query.
 
-- **Anomaly Detection**: Z-score analysis against 30-day rolling averages flags revenue drops, surges, and stockout spikes (threshold: +/- 2.0 standard deviations)
-- **Time-Series Forecasting**: BigQuery ML ARIMA_PLUS models trained on 5 years of data predict future revenue and stockout levels with 95% confidence intervals
-- **Natural Language Explanations**: Agent explains anomalies with regional and category breakdowns, Z-scores in plain language, and context from known events
-- **6 Specialized Tools**: Each tool queries BigQuery with fixed SQL for reliability, security, and cost control
+| Build | Pattern | Template |
+|---|---|---|
+| Build 1 | Pub/Sub to BigQuery streaming | Managed Dataflow template |
+| Build 2 | GCS CSV to BigQuery batch load | Managed Dataflow template with JavaScript UDF |
+| Build 3 | Pub/Sub windowed fraud detection | Custom Apache Beam Python pipeline |
 
-## Dataset
+---
+
+## Verified Results
+
+All metrics below are from synthetic data generated during the project run.
+
+### Build 1: Streaming
 
 | Metric | Value |
-|--------|-------|
-| Time range | 2020-01-01 to 2024-12-30 |
-| Daily records | 45,650 (5 regions x 5 categories x 1,826 days) |
-| Total revenue | $2.92B |
-| Regions | Northeast, Southeast, Midwest, West, Southwest |
-| Categories | Electronics, Clothing, Home and Garden, Sports, Grocery |
-| Injected anomalies | 10 known events (revenue drops, surges, stockout spikes) |
-| Detected anomalies | 108 revenue + 119 stockout |
+|---|---|
+| Total transactions captured | 3,111 |
+| Total volume | $7,097,837.92 |
+| Flagged transactions | 1,181 |
+| Dead-letter errors | 0 |
+| Merchants | 10 |
+| Card types | 4 |
 
-## Tech Stack
+### Build 2: Batch
 
-| Component | Technology |
-|-----------|-----------|
-| Agent Framework | Google ADK 1.25.1 |
-| LLM | Gemini 2.5 Flash (AI Studio free tier) |
-| Data Warehouse | BigQuery |
-| ML Models | BigQuery ML ARIMA_PLUS |
-| Detection Method | Z-score (30-day rolling window) |
-| Language | Python 3.14 |
-| Auth | gcloud application-default |
-| Cost | $0 (all free tier) |
+| Metric | Value |
+|---|---|
+| Settlement records loaded | 200 |
+| SETTLED | 176 records |
+| REVERSED | 17 records |
+| HELD | 7 records |
+| Net revenue loaded | $396,306.72 |
+| Job runtime | 3 minutes 16 seconds |
+| Data quality checks | 3 of 3 passed |
 
-## Tools
+**Batch DAG completed (4 stages, all green):**
 
-| Tool | Description |
-|------|-------------|
-| `get_recent_revenue_anomalies(days)` | Revenue anomalies in last N days |
-| `get_recent_stockout_anomalies(days)` | Stockout spikes in last N days |
-| `get_anomaly_detail(sale_date)` | Regional + category breakdown for a date |
-| `get_revenue_forecast(horizon_days)` | ARIMA_PLUS revenue predictions |
-| `get_stockout_forecast(horizon_days)` | ARIMA_PLUS stockout predictions |
-| `get_anomaly_summary()` | Full dataset anomaly overview with known events |
+![Build 2 Batch DAG Completed](screenshots/build2_batch_dag_completed.png)
 
-## Example Queries
+**Fee analysis by card network:**
 
-```
-Show me recent revenue anomalies
-What happened on 2022-06-20?
-Give me a 30-day revenue forecast
-Summarize all anomalies across the dataset
-Are there any stockout spikes recently?
-Forecast stockouts for the next 2 weeks
-Explain the anomaly on January 1, 2023
-```
+![Build 2 Fee Analysis by Card Type](screenshots/build2_fee_analysis_by_card_type.png)
+
+**Merchant net revenue breakdown:**
+
+![Build 2 Merchant Net Revenue](screenshots/build2_merchant_net_revenue.png)
+
+**Streaming vs batch reconciliation query:**
+
+![Build 2 Reconciliation Query](screenshots/build2_reconciliation_query.png)
+
+### Build 3: Custom Beam
+
+| Metric | Value |
+|---|---|
+| Fraud windows captured | 2 |
+| Window 1 fraud rate | 36.97% HIGH_RISK, top merchant McDonalds |
+| Window 2 fraud rate | 43.78% HIGH_RISK, top merchant Uber |
+| Window duration | Exactly 5 minutes each |
+| Pipeline stages | 7 custom transforms |
+
+**Three-way join across all three builds:**
+
+![Build 3 Three-Way Join Results](screenshots/build3_three_way_join_results.png)
+
+### Verification
+
+**18 of 18 automated checks passed** across all three builds covering row counts, data quality, UDF correctness, fraud detection logic, and the three-way reconciliation join.
+
+---
 
 ## Project Structure
 
 ```
-adk-anomaly-detection/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── requirements.txt
-├── anomaly_detection_agent/
-│   ├── __init__.py
-│   ├── agent.py                          # ADK agent definition (6 tools)
-│   ├── tools.py                          # BigQuery tool functions
-│   └── anomaly_detection_eval.evalset.json
-├── scripts/
-│   ├── generate_data.py                  # Synthetic data generator
-│   └── verify.sh                         # Full verification script
+retailco-gcp-dataflow/
+├── streaming/
+│   └── publish_transactions.py       Synthetic transaction publisher
+├── batch/
+│   ├── generate_settlements.py       Daily settlements CSV generator
+│   ├── settlements_schema.json       BigQuery schema for Dataflow template
+│   └── settlements_transform.js      JavaScript UDF: normalize and validate rows
+├── beam/
+│   └── fraud_windows_pipeline.py     Custom Apache Beam pipeline with 5-min windows
+├── sql/
+│   ├── settlement_summary.sql        Settlement breakdown by status
+│   ├── fee_analysis.sql              Card network effective fee rates
+│   ├── reconciliation.sql            Streaming vs batch reconciliation join
+│   └── three_way_join.sql            Three-table join across all three builds
+├── screenshots/
+│   ├── build2_batch_dag_running.png
+│   ├── build2_batch_dag_completed.png
+│   ├── build2_fee_analysis_by_card_type.png
+│   ├── build2_merchant_net_revenue.png
+│   ├── build2_reconciliation_query.png
+│   ├── build2_cloud_scheduler.png
+│   ├── build3_beam_dag_top.png
+│   ├── build3_beam_dag_bottom.png
+│   ├── build3_write_to_bigquery_stage.png
+│   ├── build3_three_way_join_results.png
+│   └── build3_three_way_join_full_row.png
 └── docs/
-    ├── ARCHITECTURE.md                   # 7 ADRs and design decisions
-    ├── BUILD_GUIDE.md                    # Step-by-step build walkthrough
-    ├── QA_GUIDE.md                       # In-depth Q&A (10 parts)
-    ├── architecture_diagram.svg          # Colored SVG (renders on GitHub)
-    └── screenshots/                      # 6 named PNGs
+    ├── RetailCo_Architecture.svg     Full architecture diagram
+    └── RetailCo_QA_Explanation.docx  Technical Q&A and design decisions
 ```
 
-## Quick Start
+---
 
-### Prerequisites
+## Documentation
 
-- Google Cloud project with BigQuery enabled
-- Python 3.11+
-- gcloud CLI authenticated
-- Gemini API key from [AI Studio](https://aistudio.google.com/apikey)
+| Document | Description |
+|---|---|
+| [Architecture Diagram](docs/RetailCo_Architecture.svg) | Three-build pipeline architecture with component details |
+| [Q&A and Technical Explanation](docs/RetailCo_QA_Explanation.docx) | 15 interview-ready Q&A covering design decisions, debugging, and production considerations |
 
-### Setup
+---
 
-```bash
-git clone https://github.com/gbhorne/adk-anomaly-detection.git
-cd adk-anomaly-detection
-pip install -r requirements.txt
-export GOOGLE_GENAI_USE_VERTEXAI=FALSE
-export GOOGLE_API_KEY="your-api-key"
+## Tech Stack
+
+- Google Cloud Dataflow
+- Google Cloud Pub/Sub
+- Google BigQuery
+- Google Cloud Storage
+- Apache Beam Python SDK 3.12
+- Cloud Scheduler
+- Python 3
+
+---
+
+## Infrastructure Configuration
+
+| Setting | Value |
+|---|---|
+| Region | us-east1 |
+| Worker type | e2-medium |
+| Max workers | 1 |
+| Streaming engine | Enabled |
+| Job mode | Exactly once |
+
+---
+
+## The Reconciliation Query
+
+The three-way join across all three builds:
+
+```sql
+SELECT
+  fw.window_start,
+  fw.window_end,
+  fw.total_transactions        AS streamed_transactions,
+  fw.flagged_transactions,
+  fw.fraud_rate_pct,
+  fw.risk_level,
+  fw.top_merchant,
+  COUNT(s.settlement_id)       AS settled_count,
+  ROUND(SUM(s.net_amount), 2)  AS settled_net_revenue,
+  ROUND(SUM(s.fee_amount), 2)  AS total_fees_paid,
+  COUNTIF(s.settlement_status = 'REVERSED') AS reversals,
+  COUNTIF(s.settlement_status = 'HELD')     AS held_count
+FROM `[PROJECT-ID].transactions.fraud_windows` fw
+LEFT JOIN `[PROJECT-ID].transactions.settlements_daily` s
+  ON DATE(fw.window_start) = s.settlement_date
+LEFT JOIN `[PROJECT-ID].transactions.transactions_raw` t
+  ON t.timestamp BETWEEN fw.window_start AND fw.window_end
+GROUP BY
+  fw.window_start, fw.window_end,
+  fw.total_transactions, fw.flagged_transactions,
+  fw.fraud_rate_pct, fw.risk_level, fw.top_merchant
+ORDER BY fw.window_start DESC
 ```
-
-See [docs/BUILD_GUIDE.md](docs/BUILD_GUIDE.md) for full data loading and ML model training steps.
-
-### Launch
-
-```bash
-adk web .
-```
-
-Select `anomaly_detection_agent` from the dropdown.
-
-## Architecture Decisions
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full ADRs:
-
-1. **ADK for agent framework** -- Native GCP integration, Gemini-optimized
-2. **AI Studio over Vertex AI** -- Sandbox blocks aiplatform.googleapis.com
-3. **Single specialist agent** -- Focused context, all 6 tools in one agent
-4. **Z-score + ARIMA_PLUS hybrid** -- Statistical detection for historical, ML for forecasting
-5. **Fixed SQL over text-to-SQL** -- Reliability, security, cost control
-6. **Dict return with status field** -- Consistent tool contract
-7. **Synthetic data with injected anomalies** -- Ground truth for validation
-
-## Testing Results
-
-- 100% tool selection accuracy across all 5 test queries
-- All 6 tools returning valid BigQuery results
-- Date serialization handled (datetime to ISO string)
-- 10 injected anomalies detected by Z-score analysis
-- ARIMA_PLUS models capturing weekly + yearly seasonality with US holidays
-- Agent correctly cross-references detected anomalies with known events
-
-## Agent Build Portfolio Context
-
-This is project 5 in a GCP data engineering portfolio:
-
-| # | Project | Status |
-|---|---------|--------|
-| 1 | [Enterprise Analytics](https://github.com/gbhorne/enterprise-analytics) | Complete |
-| 2 | [Terraform IaC](https://github.com/gbhorne/terraform-gcp-analytics) | Complete |
-| 3 | [ADK Multi-Agent System](https://github.com/gbhorne/adk-retail-agents) | Complete |
-| 4 | ADK NL2SQL Agent | Complete |
-| 5 | **ADK Anomaly Detection** | Complete |
-| 6 | Research Agent | Planned |
-| 7 | MLOps Pipeline | Planned |
-
-## License
-
-MIT
